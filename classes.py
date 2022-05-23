@@ -73,19 +73,19 @@ class NoiseModel:
 class ControlsModel:
     # Can initialize this with either the full uHistory array
     # Or, a function applied over an array of times
-    def __init__(self, uHistory=None, f=None, times=None):
+    def __init__(self, uHistory=None, fxn=None, times=None):
+        self.fxn = fxn
+        self.times = times
+
         if uHistory is not None:
             self.uHistory = uHistory
-        elif f is not None and times is not None:
-            dim = len(f(times[0]))
+        elif fxn is not None and times is not None:
+            dim = 1 if np.isscalar(fxn(times[0])) else len(fxn(times[0]))
             self.uHistory = np.zeros((dim, len(times)))
-            for t in times:
-                self.uHistory[:,t] = self.f(t)
+            for i,t in enumerate(times):
+                self.uHistory[:,i] = self.fxn(t)
         else:
             raise Exception("Must provide more inputs to the controls model")
-
-    def f(self, t):
-        return self.f(t)
 
 class TimeModel:
     # Must provide dt and one of the three optional inputs
