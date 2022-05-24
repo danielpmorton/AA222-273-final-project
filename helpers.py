@@ -88,38 +88,12 @@ def plotSLAM(groundTruthHistory, slamHistory, title, numMapPoints=30, dotSize=10
 
     plt.show()
 
-def plot_SMD_simple(times, xHistory, muHistory, sigmaHistory, title):
+def plot_SMD(times, xHistory, muHistory, sigmaHistory, title, ylabels):
     xdim = xHistory.shape[0]
 
-    x1data, x2data = [xHistory[i,:] for i in range(xdim)]
-    mu1data, mu2data = [muHistory[i,:] for i in range(xdim)]
-    sigma11data, sigma22data = [sigmaHistory[i,i,:] for i in range(xdim)]
-
-    plt.subplot(2,1,1)
-    makePlot(times, x1data, mu1data, sigma11data, 'Position') # Update these based on the actual names of the state variables
-
-    plt.subplot(2,1,2)
-    makePlot(times, x2data, mu2data, sigma22data, 'Velocity')
-
+    for i in range(xdim):
+        plt.subplot(xdim, 1, i+1)
+        makePlot(times, xHistory[i,:], muHistory[i,:], sigmaHistory[i,i,:], ylabels[i])
+    
     plt.suptitle(title)
     plt.show()
-
-def plot_SMD_no_m(times, xHistory, muHistory, sigmaHistory, title):
-    xdim = xHistory.shape[0]
-
-    x1data, x2data, x3data = [xHistory[i,:] for i in range(xdim)]
-    mu1data, mu2data, mu3data = [muHistory[i,:] for i in range(xdim)]
-    sigma11data, sigma22data, sigma33data = [sigmaHistory[i,i,:] for i in range(xdim)]
-
-    plt.subplot(3,1,1)
-    makePlot(times, x1data, mu1data, sigma11data, 'Position') # Update these based on the actual names of the state variables
-
-    plt.subplot(3,1,2)
-    makePlot(times, x2data, mu2data, sigma22data, 'Velocity')
-
-    plt.subplot(3,1,3)
-    makePlot(times, x3data, mu3data, sigma33data, 'Mass')
-
-    plt.suptitle(title)
-    plt.show()
-

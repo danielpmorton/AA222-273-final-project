@@ -3,7 +3,7 @@ from classes import *
 from filters import *
 from Problems.smd_no_m.params import *
 from Problems.smd_no_m.fgAC import *
-from helpers import seedRNG, plot_SMD_no_m
+from helpers import seedRNG, plot_SMD
 
 seedRNG(0)
 
@@ -25,8 +25,10 @@ sim = SimulatedResult(x0, P_sim)
 
 # Evaluate the filter
 storage = FilterStorage(mu0, sigma0, time_model.nTimesteps)
-# filtered = FilterResult(EKF, P, sim.yHistory, storage)
+filtered = FilterResult(EKF, P, sim.yHistory, storage)
 # filtered = FilterResult(iEKF, P, sim.yHistory, storage, iEKF_maxIter=20, iEKF_eps=1e-3)
-filtered = FilterResult(UKF, P, sim.yHistory, storage)
+# filtered = FilterResult(UKF, P, sim.yHistory, storage)
 
-plot_SMD_no_m(time_model.times, sim.xHistory, filtered.muHistory, filtered.sigmaHistory, f"{filtered.filter.__name__} Spring Mass Damper")
+plot_SMD(time_model.times, sim.xHistory, filtered.muHistory, filtered.sigmaHistory, 
+         f"{filtered.filter.__name__} Spring Mass Damper", 
+         ["Position", "Velocity", "Mass"])
