@@ -88,12 +88,38 @@ def plotSLAM(groundTruthHistory, slamHistory, title, numMapPoints=30, dotSize=10
 
     plt.show()
 
-def plot_SMD(times, xHistory, muHistory, sigmaHistory, title, ylabels):
+def plot_SMD_OLD(times, xHistory, muHistory, sigmaHistory, title, ylabels):
     xdim = xHistory.shape[0]
 
     for i in range(xdim):
         plt.subplot(xdim, 1, i+1)
         makePlot(times, xHistory[i,:], muHistory[i,:], sigmaHistory[i,i,:], ylabels[i])
     
+    plt.suptitle(title)
+    plt.show()
+
+def makePlot_new(times, xdata, mudata, sigmadata, testName, ax):
+    ax.plot(times, xdata, c='b', label="Ground Truth")
+    ax.plot(times, mudata, c='r', label="Filtered Result")
+    upper = mudata + 1.96*np.sqrt(sigmadata)
+    lower = mudata - 1.96*np.sqrt(sigmadata)
+    ax.fill_between(times, upper, lower, alpha=0.3, color='r', label="95% Confidence Interval")
+    ax.set_xlabel("Time")
+    ax.set_ylabel(testName)
+
+
+def plot_SMD(times, xHistory, muHistory, sigmaHistory, title, ylabels):
+    xdim = xHistory.shape[0]
+    fig, axes = plt.subplots(xdim, 1)
+
+    for i in range(xdim):
+        plt.subplot(xdim, 1, i+1)
+        makePlot_new(times, xHistory[i,:], muHistory[i,:], sigmaHistory[i,i,:], ylabels[i], axes[i])
+    
+    plt.subplots_adjust(right=0.8)
+
+    lines, labels = fig.axes[-1].get_legend_handles_labels()
+    fig.legend(lines, labels, loc="center right") # , bbox_to_anchor=(1, 0.5)
+
     plt.suptitle(title)
     plt.show()
