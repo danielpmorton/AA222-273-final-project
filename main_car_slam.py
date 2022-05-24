@@ -1,8 +1,7 @@
 import numpy as np
 from classes import *
 from filters import *
-from Problems.car_SLAM.params import *
-from Problems.car_SLAM.fgAC import *
+from Problems.car_slam import *
 from helpers import seedRNG, plotSLAM # Update this in the future - import more stuff/all?
 
 # Testing with code from HW6/HW7

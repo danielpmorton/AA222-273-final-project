@@ -1,8 +1,7 @@
 import numpy as np
 from classes import *
 from filters import *
-from Problems.smd_no_m.params import *
-from Problems.smd_no_m.fgAC import *
+from Problems.smd_no_m import *
 from helpers import seedRNG, plot_SMD
 
 seedRNG(0)
