@@ -1,0 +1,17 @@
+Questions for Mac
+
+Having trouble with:
+- Determining a good objective function - and how can we probe this objective function?
+- Figuring out how to evaluate performance without access to the ground truth data - originally thinking I could just find the result that minimizes oscillation or bias but this is much more difficult than I thought
+- Just formulating the problems in general
+- Dealing with different notations in the reference papers
+- Trying to do something different that isn't just a standard filter we've already done
+
+
+Questions:
+- Recommendations for line search with EKF without just repeating the iEKF? It usually requires a step direction, but this seems like it doesn't make a whole lot of sense given what we already know about the system and the jacobians?
+
+Ask about:
+- Genetic algorithms with KF? - A would need to be a constant matrix with no dependence on x or t
+- Recommendations for linear systems with more parameters/DOFs?
+

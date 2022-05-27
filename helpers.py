@@ -123,3 +123,15 @@ def plot_SMD(times, xHistory, muHistory, sigmaHistory, title, ylabels):
 
     plt.suptitle(title)
     plt.show()
+
+
+def plotGA():
+    # NOTE: probably also want to keep track of the results of the GA at each iteration
+    # The idea would be to plot this history and show how the GA evolved
+    # What the plot would look like:
+    # 1 subplot for every entry in the A matrix (if A is 2x2, then have 4 subplots)
+    # - X axis: each iteration of the GA
+    # - Y axis: the magnitude of the relevant component of A
+    # - At each iteration, scatter the values from every chromosome in the population
+
+    raise Exception("Not implemented yet!")
