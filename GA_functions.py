@@ -37,6 +37,10 @@ def rouletteWheelSelection(y, k=None):
     Returns a list of index pairs for the selected parent indices
     '''
     fitnesses = np.max(y) - y
+    # At initialization, all filters might all have the same evaluation, making fitnesses all 0.
+    # So, instead of all 0, replace with all 1 so the division will work
+    if all(val == 0 for val in fitnesses):
+        fitnesses += 1 
     fitnesses = fitnesses / np.linalg.norm(fitnesses, ord=1) # L1 normalize the fitnesses
     return [np.random.choice(np.arange(len(y)), size=2, p=fitnesses) for _ in range(len(y))]
 

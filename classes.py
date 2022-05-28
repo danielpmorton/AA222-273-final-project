@@ -41,7 +41,7 @@ class Problem:
         self.noise_model = noise_model
         self.time_model = time_model
 
-class MeasurementModel:
+class NonlinearMeasurementModel:
     def __init__(self, g, C, ydim):
         self.g = g 
         self.C = C 
@@ -53,7 +53,15 @@ class MeasurementModel:
     def C(self, x):
         return self.C(x)
 
-class DynamicsModel:
+class LinearMeasurementModel:
+    def __init__(self, C):
+        self.C = C 
+        self.ydim = C.shape[0]
+
+    def g(self, x):
+        return self.C @ x
+
+class NonlinearDynamicsModel:
     def __init__(self, f, A, xdim):
         self.f = f # Callable. f(x, u)
         self.A = A # Callable. A(x, u)
@@ -64,6 +72,15 @@ class DynamicsModel:
     
     def A(self, x, u):
         return self.A(x, u)
+
+class LinearDynamicsModel:
+    def __init__(self, A, B):
+        self.A = A # Matrix
+        self.B = B
+        self.xdim = A.shape[0]
+    
+    def f(self, x, u):
+        return self.A @ x + self.B @ u
 
 class NoiseModel:
     def __init__(self, Q, R):
@@ -226,22 +243,24 @@ class FilterResult:
 
 
 class GAInitialization:
-    def __init__(self, mu0, sigma0, mean_chromosome, cov_chromosome, pop_size, 
-                 selection_fxn, crossover_fxn, mutation_fxn, k_max, 
-                 k_selection=None, L_interp_crossover=0.5):
+    def __init__(self, mu0_state, sigma0_state, mu0_chromosome, sigma0_chromosome, nTimesteps, 
+                 pop_size, selection_fxn, crossover_fxn, mutation_fxn, k_max, 
+                 k_selection=None, L_interp_crossover=0.5, mutation_stdev=1):
 
         # Storing information from inputs
         self.pop_size = pop_size
-        self.mean_chromosome = mean_chromosome
-        self.cov_chromosome = cov_chromosome
-        self.mu0 = mu0
-        self.sigma0 = sigma0
+        self.mu0_chromosome = mu0_chromosome
+        self.sigma0_chromosome = sigma0_chromosome
+        self.mu0_state = mu0_state
+        self.sigma0_state = sigma0_state
         self.selection_fxn = selection_fxn
         self.crossover_fxn = crossover_fxn
         self.mutation_fxn = mutation_fxn
         self.k_max = k_max
         self.k_selection = k_selection
         self.L_interp_crossover = L_interp_crossover
+        self.nTimesteps = nTimesteps
+        self.mutation_stdev = mutation_stdev
         self.population = self.getInitialPopulation()
         self.muHistories, self.sigmaHistories = self.initializeStorage()
         
@@ -256,18 +275,18 @@ class GAInitialization:
         filters to use for the initial population
         - Return shape: list of length pop_size, containing chromosomes
         '''
-        return [np.random.multivariate_normal(self.mean_chromosome, self.cov_chromosome) for _ in range(self.pop_size)]
+        return [np.random.multivariate_normal(self.mu0_chromosome, self.sigma0_chromosome) for _ in range(self.pop_size)]
         # return np.random.multivariate_normal(self.mean_chromosome, self.cov_chromosome, size=self.pop_size).T
     
     def initializeStorage(self):
         '''
         Returns two lists, each of length pop_size, containing the muHistory, sigmaHistory for each filter
         '''
-        dim = len(self.mu0)
+        dim = len(self.mu0_state)
         muHistory = np.zeros((dim, self.nTimesteps))
         sigmaHistory = np.zeros((dim, dim, self.nTimesteps))
-        muHistory[:,0] = self.mu0
-        sigmaHistory[:,:,0] = self.sigma0
+        muHistory[:,0] = self.mu0_state
+        sigmaHistory[:,:,0] = self.sigma0_state
         return [muHistory] * self.pop_size , [sigmaHistory] * self.pop_size
 
 # Assumes we are using the kalman filter
@@ -287,8 +306,8 @@ class GAResult:
         # Note: check to see if you moved all of the parameters over!!!
         self.muHistories = GA_initialization.muHistories # Initial
         self.sigmaHistories = GA_initialization.sigmaHistories # Initial
-        self.mu0 = GA_initialization.mu0
-        self.sigma0 = GA_initialization.sigma0
+        self.mu0_state = GA_initialization.mu0_state
+        self.sigma0_state = GA_initialization.sigma0_state
         self.population = GA_initialization.population
         self.pop_size = GA_initialization.pop_size
         self.selection_fxn = GA_initialization.selection_fxn
@@ -297,6 +316,7 @@ class GAResult:
         self.k_max = GA_initialization.k_max
         self.k_selection = GA_initialization.k_selection
         self.L_interp_crossover = GA_initialization.L_interp_crossover
+        self.mutation_stdev = GA_initialization.mutation_stdev
         
         self.bestSoFar = None
         self.bestHistory = []
@@ -314,11 +334,11 @@ class GAResult:
         self.geneticAlgorithm()
         
         # Before we terminate, evaluate the filters one last time and choose the single best
-        evals = self.evaluatePopulation(self.population)
+        evals = self.evaluatePopulation()
         # bestSoFar will get updated when this is run
         print(f"Final result: {self.bestSoFar}")
 
-    def chromosomeToA(chromosome):
+    def chromosomeToA(self, chromosome):
         '''
         Converts a chromosome array to a square A matrix for the KF, returns the matrix
         '''
@@ -338,8 +358,8 @@ class GAResult:
         # Filter each chromosome for all timesteps
         for chromo_ind in range(self.pop_size):
             # Initialize mu and sigma to the mu0, sigma0 values stored
-            mu = self.mu0
-            sigma = self.sigma0
+            mu = self.mu0_state
+            sigma = self.sigma0_state
             # Get A based on the current chromosome
             chromosome = self.population[chromo_ind]
             A = self.chromosomeToA(chromosome)
@@ -373,11 +393,10 @@ class GAResult:
             sigmaHistory = self.sigmaHistories[chromo_ind]
             metric = 0 # Initialize
             for i in range(self.nTimesteps):
-                y = self.yHistory[i]
-                u = self.uHistory[:,i]
+                y = self.yHistory[:,i]
                 sigma = sigmaHistory[:,:,i]
                 mu = muHistory[:,i]
-                mahalanobis_dist = (y - self.g(mu,u)) @ np.linalg.inv(self.C @ sigma @ self.C.T + self.R) @ (y - self.g(mu,u))
+                mahalanobis_dist = (y - self.g(mu)) @ np.linalg.inv(self.C @ sigma @ self.C.T + self.R) @ (y - self.g(mu))
                 # Minimizing the sum of mahalanobis distances is equivalent to minimizing the negative log likelihood, 
                 # which is also equivalent to minimizing the product of probabilities (but more numerically stable)
                 metric += mahalanobis_dist
@@ -402,8 +421,8 @@ class GAResult:
             self.bestSoFar = self.population[np.argmin(evals)] # Store this for plotting purposes
             
             parents = self.selection_fxn(evals, self.k_selection)
-            children = [self.crossover_fxn(self.population[p[1]], self.population[p[2]]) for p in parents]
-            self.population = [self.mutation_fxn(child) for child in children]
+            children = [self.crossover_fxn(self.population[p[0]], self.population[p[1]]) for p in parents]
+            self.population = [self.mutation_fxn(child, self.mutation_stdev) for child in children]
             self.populationHistory.append(self.population) # Save data
             print("GA iteration complete")
         print("All GA iterations complete")

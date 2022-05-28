@@ -16,7 +16,7 @@ x0_sim = np.random.multivariate_normal(mu0, sigma0_sim)
 
 # Build our models
 time_model = TimeModel(dt, duration=20)
-dynamics_model = DynamicsModel(f, A, xdim)
+dynamics_model = NonlinearDynamicsModel(f, A, xdim)
 measurement_model = MeasurementModel(g, C, ydim)
 controls_model = ControlsModel(uHistory=np.vstack((vt*np.ones(time_model.nTimesteps), np.sin(time_model.times))))
 noise_model = NoiseModel(Q, R)
@@ -33,5 +33,8 @@ storage = FilterStorage(mu0, sigma0, time_model.nTimesteps)
 filtered = FilterResult(EKF, P, sim.yHistory, storage)
 # filtered = FilterResult(iEKF, P, sim.yHistory, storage, iEKF_maxIter=20, iEKF_eps=1e-3)
 # filtered = FilterResult(UKF, P, sim.yHistory, storage)
+
+# from plotting_car import plot
+# plot(time_model.times, sim.xHistory[:3], filtered.muHistory[:3], filtered.sigmaHistory[:3,:3], "Test")
 
 plotSLAM(sim.xHistory, filtered.muHistory, f"{filtered.filter.__name__} SLAM")
