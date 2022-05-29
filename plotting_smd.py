@@ -12,8 +12,8 @@ What do we want to show with the plots?
     Similarly, want to highlight the best one so far and how this changes
 - Convergence plot for mahalanobis distance metric evaluations
 
-NOTE: This entire file assumes that we're working with the CAR system
-    So, we have a state of dimension 3 - px, py, theta
+NOTE: This entire file assumes that we're working with the Spring-Mass-Damper system
+    So, we have a state of dimension 2 - position and velocity
 '''
 
 # Plotting the single best trajectory versus the ground truth
@@ -24,15 +24,6 @@ def plot_best_filter_vs_truth(times, xHistory, muHistory, sigmaHistory):
     muHistory:    Filtered pose estimate.   Shape (xdim, nTimesteps)
     sigmaHistory: Filtered covariance.      Shape (xdim, xdim, nTimesteps)
     '''
-    # Helper function
-    def makeXYPlot(x, y, mux, muy):
-        plt.plot(x, y, c='k')
-        plt.plot(mux, muy, c='r')
-        plt.legend(["Ground Truth", "Filtered Result"])
-        plt.xlabel("X")
-        plt.ylabel("Y")
-        plt.title("X-Y Trajectory")
-        plt.gca().set_aspect('equal', adjustable='box')    
     # Helper function
     def makeSubplot(times, xdata, mudata, sigmadata, testName):
         plt.plot(times, xdata, c='k')
@@ -46,27 +37,21 @@ def plot_best_filter_vs_truth(times, xHistory, muHistory, sigmaHistory):
 
     xdim = xHistory.shape[0]
 
-    x1data, x2data, x3data = [xHistory[i,:] for i in range(xdim)]
-    mu1data, mu2data, mu3data = [muHistory[i,:] for i in range(xdim)]
-    sigma11data, sigma22data, sigma33data = [sigmaHistory[i,i,:] for i in range(xdim)]
+    x1data, x2data = [xHistory[i,:] for i in range(xdim)]
+    mu1data, mu2data = [muHistory[i,:] for i in range(xdim)]
+    sigma11data, sigma22data, = [sigmaHistory[i,i,:] for i in range(xdim)]
 
-    plt.subplot(3,2,1)
-    makeSubplot(times, x1data, mu1data, sigma11data, 'px') # Update these based on the actual names of the state variables
+    plt.subplot(2,1,1)
+    makeSubplot(times, x1data, mu1data, sigma11data, 'Position')
 
-    plt.subplot(3,2,3)
-    makeSubplot(times, x2data, mu2data, sigma22data, 'py')
-
-    plt.subplot(3,2,5)
-    makeSubplot(times, x3data, mu3data, sigma33data, 'theta')
-
-    plt.subplot(1,2,2)
-    makeXYPlot(x1data, x2data, mu1data, mu2data)
+    plt.subplot(2,1,2)
+    makeSubplot(times, x2data, mu2data, sigma22data, 'Velocity')
 
     plt.suptitle("Comparing the best filter to the ground truth")
     plt.show()
 
 # Plot a whole generation of the algorithm
-def plot_generation(xHistory, muHistories_history, evalHistory, gen=0):
+def plot_generation(times, xHistory, muHistories_history, evalHistory, gen=0):
     '''
     Plots each XY trajectory with variable color depending on the weight
 
@@ -82,24 +67,24 @@ def plot_generation(xHistory, muHistories_history, evalHistory, gen=0):
     evals = evalHistory[gen]
 
     # Plotting the ground truth
-    plt.plot(xHistory[0,:], xHistory[1,:], c='k', label="Ground Truth")
+    plt.plot(times, xHistory[0,:], c='k', label="Ground Truth")
 
     # Plotting all trajectories with variable color, semi-transparent
     # num_filters = len(evals)
     # ranks = rankdata(evals)
     for (i, muHistory) in enumerate(muHistories):
         # rank_normalized = ranks[i] / num_filters
-        plt.plot(muHistory[0,:], muHistory[1,:], c='r', alpha=0.2, label="__nolegend__")
+        plt.plot(times, muHistory[0,:], c='r', alpha=0.2, label="__nolegend__")
     
     # Plotting the best filter in a distinguishable color
     best_muHistory = muHistories[np.argmin(evals)]
-    plt.plot(best_muHistory[0,:], best_muHistory[1,:], c='b', alpha=0.7, label="Best filter")
+    plt.plot(times, best_muHistory[0,:], c='b', alpha=0.7, label="Best filter")
 
     plt.title("Comparison of filters within a generation")
-    plt.xlabel("X")
-    plt.ylabel("Y")
+    plt.xlabel("Time")
+    plt.ylabel("Position")
     plt.legend()
-    plt.gca().set_aspect('equal', adjustable='box')   
+    # plt.gca().set_aspect('equal', adjustable='box')   
     plt.show()
     
 def plot_mahalanobis_convergence(evalHistory):
@@ -124,6 +109,7 @@ def plot_mahalanobis_convergence(evalHistory):
     plt.xlabel("Iteration")
     plt.ylabel("Evaluation value")
     # plt.legend()
+    plt.yscale('log')
     plt.show()
 
 def plot_chromosome_convergence(bestHistory, trueChromosome):
@@ -145,7 +131,6 @@ def plot_chromosome_convergence(bestHistory, trueChromosome):
     plt.legend()
     plt.show()
 
-
 def plot_optimal_filter_vs_truth(times, xHistory, muHistory, sigmaHistory):
     '''
     times:        Array of times.           Shape (nTimesteps,)
@@ -153,15 +138,6 @@ def plot_optimal_filter_vs_truth(times, xHistory, muHistory, sigmaHistory):
     muHistory:    Filtered pose estimate.   Shape (xdim, nTimesteps)
     sigmaHistory: Filtered covariance.      Shape (xdim, xdim, nTimesteps)
     '''
-    # Helper function
-    def makeXYPlot(x, y, mux, muy):
-        plt.plot(x, y, c='k')
-        plt.plot(mux, muy, c='r')
-        plt.legend(["Ground Truth", "Filtered Result"])
-        plt.xlabel("X")
-        plt.ylabel("Y")
-        plt.title("X-Y Trajectory")
-        plt.gca().set_aspect('equal', adjustable='box')    
     # Helper function
     def makeSubplot(times, xdata, mudata, sigmadata, testName):
         plt.plot(times, xdata, c='k')
@@ -175,21 +151,15 @@ def plot_optimal_filter_vs_truth(times, xHistory, muHistory, sigmaHistory):
 
     xdim = xHistory.shape[0]
 
-    x1data, x2data, x3data = [xHistory[i,:] for i in range(xdim)]
-    mu1data, mu2data, mu3data = [muHistory[i,:] for i in range(xdim)]
-    sigma11data, sigma22data, sigma33data = [sigmaHistory[i,i,:] for i in range(xdim)]
+    x1data, x2data = [xHistory[i,:] for i in range(xdim)]
+    mu1data, mu2data = [muHistory[i,:] for i in range(xdim)]
+    sigma11data, sigma22data, = [sigmaHistory[i,i,:] for i in range(xdim)]
 
-    plt.subplot(3,2,1)
-    makeSubplot(times, x1data, mu1data, sigma11data, 'px') # Update these based on the actual names of the state variables
+    plt.subplot(2,1,1)
+    makeSubplot(times, x1data, mu1data, sigma11data, 'Position')
 
-    plt.subplot(3,2,3)
-    makeSubplot(times, x2data, mu2data, sigma22data, 'py')
-
-    plt.subplot(3,2,5)
-    makeSubplot(times, x3data, mu3data, sigma33data, 'theta')
-
-    plt.subplot(1,2,2)
-    makeXYPlot(x1data, x2data, mu1data, mu2data)
+    plt.subplot(2,1,2)
+    makeSubplot(times, x2data, mu2data, sigma22data, 'Velocity')
 
     plt.suptitle("Results from the optimal filter")
     plt.show()

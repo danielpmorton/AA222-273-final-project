@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.linalg
+import copy
 
 class SigmaPoints:
     def __init__(self, mu, sigma, L=2):
@@ -224,7 +225,9 @@ class FilterResult:
             y = self.yHistory[:,i]
             u = self.uHistory[:,i]
             # Filter - TODO: need to check if the filter name thing works
-            if self.filter.__name__.lower() == "ekf":
+            if self.filter.__name__.lower() == "kf":
+                mu, sigma = self.filter(mu, sigma, u, y, self.Q, self.R, self.f, self.g, self.A, self.C)
+            elif self.filter.__name__.lower() == "ekf":
                 mu, sigma = self.filter(mu, sigma, u, y, self.Q, self.R, self.f, self.g, self.A, self.C)
             elif self.filter.__name__.lower() == "ukf":
                 mu, sigma = self.filter(mu, sigma, u, y, self.Q, self.R, self.f, self.g, self.UKF_lambda)
@@ -245,7 +248,7 @@ class FilterResult:
 class GAInitialization:
     def __init__(self, mu0_state, sigma0_state, mu0_chromosome, sigma0_chromosome, nTimesteps, 
                  pop_size, selection_fxn, crossover_fxn, mutation_fxn, k_max, 
-                 k_selection=None, L_interp_crossover=0.5, mutation_stdev=1):
+                 k_selection=None, L_interp_crossover=0.5, mutation_stdev=1, regularization_scaling=0):
 
         # Storing information from inputs
         self.pop_size = pop_size
@@ -261,6 +264,7 @@ class GAInitialization:
         self.L_interp_crossover = L_interp_crossover
         self.nTimesteps = nTimesteps
         self.mutation_stdev = mutation_stdev
+        self.regularization_scaling = regularization_scaling
         self.population = self.getInitialPopulation()
         self.muHistories, self.sigmaHistories = self.initializeStorage()
         
@@ -287,7 +291,7 @@ class GAInitialization:
         sigmaHistory = np.zeros((dim, dim, self.nTimesteps))
         muHistory[:,0] = self.mu0_state
         sigmaHistory[:,:,0] = self.sigma0_state
-        return [muHistory] * self.pop_size , [sigmaHistory] * self.pop_size
+        return [copy.deepcopy(muHistory) for _ in range(self.pop_size)], [copy.deepcopy(sigmaHistory) for _ in range(self.pop_size)]
 
 # Assumes we are using the kalman filter
 class GAResult:
@@ -318,6 +322,8 @@ class GAResult:
         self.L_interp_crossover = GA_initialization.L_interp_crossover
         self.mutation_stdev = GA_initialization.mutation_stdev
         
+        self.regularization_scaling = GA_initialization.regularization_scaling
+
         self.bestSoFar = None
         self.bestHistory = []
 
@@ -373,7 +379,7 @@ class GAResult:
                 self.muHistories[chromo_ind][:,i] = mu
                 self.sigmaHistories[chromo_ind][:,:,i] = sigma
         # Save our data
-        self.muHistories_history.append(self.muHistories)
+        self.muHistories_history.append(copy.deepcopy(self.muHistories))
         print("Filtering complete")
     
     def evaluatePopulation(self):
@@ -400,6 +406,7 @@ class GAResult:
                 # Minimizing the sum of mahalanobis distances is equivalent to minimizing the negative log likelihood, 
                 # which is also equivalent to minimizing the product of probabilities (but more numerically stable)
                 metric += mahalanobis_dist
+                metric += self.regularization_scaling * np.sum(abs(self.population[chromo_ind]))
             evals.append(metric)
         
         # Save data on the best we've seen
